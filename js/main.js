@@ -1,61 +1,136 @@
-$(function(){
-  //判断浏览设备函数
-  function browserRedirect() {
-   var sUserAgent = navigator.userAgent.toLowerCase();
-   var bIsIpad = sUserAgent.match(/ipad/i) == "ipad";
-   var bIsIphoneOs = sUserAgent.match(/iphone os/i) == "iphone os";
-   var bIsMidp = sUserAgent.match(/midp/i) == "midp";
-   var bIsUc7 = sUserAgent.match(/rv:1.2.3.4/i) == "rv:1.2.3.4";
-   var bIsUc = sUserAgent.match(/ucweb/i) == "ucweb";
-   var bIsAndroid = sUserAgent.match(/android/i) == "android";
-   var bIsCE = sUserAgent.match(/windows ce/i) == "windows ce";
-   var bIsWM = sUserAgent.match(/windows mobile/i) == "windows mobile";
-   if (bIsIpad || bIsIphoneOs || bIsMidp || bIsUc7 || bIsUc || bIsAndroid || bIsCE || bIsWM) {
-       return false;
-   } else {
-       return true;
-   }
-  }
-  //插件配置
-  var isPc=browserRedirect();
-  var en = ['Home', 'Projects', 'Professions', 'Experiences',
-                  'Hobbies', 'Contact'];
-  var cn = ['首页', '项目', '技能', '工作', '爱好', '联系'];
-  var pcBgColor = ['#7080b9', '#1bbc9b', '#7080b9', '#1bbc9b','#7080b9','#1bbc9b'];
-  var mBgColor = ['#7080b9','#7080b9','#7080b9','#7080b9','#7080b9','#7080b9',];
-  var isEn = window.location.href.indexOf('en.html') >= 0;
-  $('#pagePilling').fullpage({
-      sectionsColor: isPc?pcBgColor:mBgColor,
-      navigation: true,
-      navigationTooltips: isEn?en:cn,
-      resize: true,
-      continuousVertical: true,
 
-  });
+// 百度地图API功能
+var map = new BMap.Map("container");//创建地图容器
 
-  //根据浏览窗口大小决定是否使用滚动条
-  $(window).resize(function(){
-        autoScrolling();
-  });
+map.centerAndZoom("北京市", 12); //初始化地图。设置中心点和地图级别
+map.enableScrollWheelZoom(true);
 
-  function autoScrolling(){
-      var $ww = $(window).width();
-      if($ww < 1024){
-          $.fn.fullpage.setAutoScrolling(false);
-          $('#fp-nav').css('display','none');
-      } else {
-          $.fn.fullpage.setAutoScrolling(true);
-      }
-  }
-  autoScrolling();
+//添加鱼骨控件
+map.addControl(new BMap.NavigationControl());
 
 
-  //section1项目图片向上滚动
-  $('.item li').eq(1).hover(function() {
-    $(this).find('img').animate({top:'-720px'}, 3000);
-  }, function() {
-    $(this).find('img').stop().css('top',0);
-  });
+var myGeo = new BMap.Geocoder();
+
+function fun_geocoder_getPoint() {
+    var value_address_1 = document.getElementById("address_1").value;
+    myGeo.getPoint(value_address_1, function (point) {
+        if (point) {
+            map.centerAndZoom(point, 14);
+            map.addOverlay(new BMap.Marker(point));
+        }
+    }, "全国");
+}
+
+
+var hang = 0;
+
+var adds = [];
+
+var locationlwy = [];
+
+var transindex = 1;
+var i = 0;
+
+
+map.addEventListener("click", function (e) {
+    var pt = e.point;
+    myGeo.getLocation(pt, function (rs) {
+        var addComp = rs.addressComponents;
+        if (document.getElementById("mousepick").checked) {
+
+
+            document.getElementById("textinput").value += "\n" + addComp.province + addComp.city + addComp.district + addComp.street + addComp.streetNumber;
+
+
+        }
+    });
+
 
 });
 
+
+function getadds_lwy() {
+
+
+    var textarea = document.getElementById("textinput");
+    var value = textarea.value;
+    adds = value.split("\n");
+
+
+    var index1 = 0;
+
+    if (value) {
+        while (index1 < adds.length) {
+
+            add = adds[index1];
+            if (add) {
+                hang++;
+                var x = document.getElementById("locationlist").insertRow(-1);
+                var cell = x.insertCell(0);
+                cell.innerHTML = '<input type="checkbox" checked="true">';
+                var cell = x.insertCell(1);
+                cell.innerHTML = hang;
+                var cell = x.insertCell(2);
+                cell.innerHTML = add;
+                var cell = x.insertCell(3);
+                var cell = x.insertCell(4);
+            }
+
+
+            index1++;
+        }
+    }
+
+    document.getElementById('textinput').value = "";
+
+    transindex = 0;
+    i = 0;
+
+    while (i < hang) {
+        locationlwy[i] = document.getElementById("locationlist").rows[i + 1].cells[2].innerHTML;
+        i++;
+    }
+
+}
+
+var myAdd1 = "";
+
+function trans() {
+    myAdd1 = locationlwy[transindex];
+
+    (function () {
+        myGeo.getPoint(
+            myAdd1,
+            function (point) {
+
+
+                if (point) {
+
+                    document.getElementById("locationlist").rows[transindex + 1].cells[3].innerHTML = point.lng;
+                    document.getElementById("locationlist").rows[transindex + 1].cells[4].innerHTML = point.lat;
+
+
+                    var address = new BMap.Point(point.lng, point.lat);
+                }
+                else {
+                    document.getElementById("locationlist").rows[transindex + 1].cells[3].innerHTML = "请输入更详细地址";
+                }
+
+
+                transindex++;
+                if (transindex < hang) trans();
+
+
+            },
+            "全国"
+        );
+
+    })();
+
+}
+
+
+
+/**
+ * Created by wenyl on 2016/6/19.
+ */
